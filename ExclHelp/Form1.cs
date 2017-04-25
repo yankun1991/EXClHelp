@@ -288,65 +288,139 @@ namespace ExclHelp
             ToExcel(this.dt_result);
         }
 
-        public void ToExcel(DataGridView dataGridView1)
+        public void ToExcel(DataGridView myDGV)
         {
-            try
+            string fileName = "yk"+DateTime.Now.Ticks;
+            if (myDGV.Rows.Count > 0)
             {
-                //没有数据的话就不往下执行  
-                if (dataGridView1.Rows.Count == 0)
+
+                string saveFileName = "";
+                //bool fileSaved = false;  
+                SaveFileDialog saveDialog = new SaveFileDialog();
+                saveDialog.DefaultExt = "xls";
+                saveDialog.Filter = "Excel文件|*.xls";
+                saveDialog.FileName = fileName;
+                saveDialog.ShowDialog();
+                saveFileName = saveDialog.FileName;
+                if (saveFileName.IndexOf(":") < 0) return; //被点了取消   
+                Microsoft.Office.Interop.Excel.Application xlApp = new Microsoft.Office.Interop.Excel.Application();
+                if (xlApp == null)
+                {
+                    MessageBox.Show("无法创建Excel对象，可能您的机子未安装Excel");
                     return;
-                //实例化一个Excel.Application对象  
-                Microsoft.Office.Interop.Excel.Application excel = new Microsoft.Office.Interop.Excel.Application();
-                //让后台执行设置为不可见，为true的话会看到打开一个Excel，然后数据在往里写  
-                excel.Visible = true;
-                //新增加一个工作簿，Workbook是直接保存，不会弹出保存对话框，加上Application会弹出保存对话框，值为false会报错  
-                excel.Application.Workbooks.Add(true);
-                //生成Excel中列头名称  
-                for (int i = 0; i < dataGridView1.Columns.Count; i++)
-                {
-                    if (this.dt_result.Columns[i].Visible == true)
-                    {
-                        excel.Cells[1, i + 1] = dataGridView1.Columns[i].HeaderText;
-                    }
-
                 }
-                //把DataGridView当前页的数据保存在Excel中  
-                for (int i = 0; i < dataGridView1.Rows.Count - 1; i++)
+
+                Microsoft.Office.Interop.Excel.Workbooks workbooks = xlApp.Workbooks;
+                Microsoft.Office.Interop.Excel.Workbook workbook = workbooks.Add(Microsoft.Office.Interop.Excel.XlWBATemplate.xlWBATWorksheet);
+                Microsoft.Office.Interop.Excel.Worksheet worksheet = (Microsoft.Office.Interop.Excel.Worksheet)workbook.Worksheets[1];//取得sheet1  
+
+                //写入标题  
+                for (int i = 0; i < myDGV.ColumnCount; i++)
                 {
+                    worksheet.Cells[1, i + 1] = myDGV.Columns[i].HeaderText;
+                }
+                //写入数值  
+                for (int r = 0; r < myDGV.Rows.Count; r++)
+                {
+                    for (int i = 0; i < myDGV.ColumnCount; i++)
+                    {
+                        worksheet.Cells[r + 2, i + 1] = myDGV.Rows[r].Cells[i].Value;
+                    }
                     System.Windows.Forms.Application.DoEvents();
-                    for (int j = 0; j < dataGridView1.Columns.Count; j++)
-                    {
-                        if (this.dt_result.Columns[j].Visible == true)
-                        {
-                            if (dataGridView1[j, i].ValueType == typeof(string))
-                            {
-                                excel.Cells[i + 2, j + 1] = "'" + dataGridView1[j, i].Value.ToString();
-                            }
-                            else
-                            {
-                                excel.Cells[i + 2, j + 1] = dataGridView1[j, i].Value.ToString();
-                            }
-                        }
-
-                    }
                 }
-                //设置禁止弹出保存和覆盖的询问提示框  
-                excel.DisplayAlerts = true;
-                excel.AlertBeforeOverwriting = true;
-                //保存工作簿  
-                excel.Application.Workbooks.Add(true).Save();
-                //保存excel文件  
-                excel.Save("D:" + "\\yc" + DateTime.Now.Ticks + ".xls");
-                //确保Excel进程关闭  
-                excel.Quit();
-                excel = null;
-                GC.Collect();//如果不使用这条语句会导致excel进程无法正常退出，使用后正常退出
-                MessageBox.Show(this, "文件已经成功导出！", "信息提示");
+                worksheet.Columns.EntireColumn.AutoFit();//列宽自适应  
+                                                         //if (Microsoft.Office.Interop.cmbxType.Text != "Notification")  
+                                                         //{  
+                                                         //    Excel.Range rg = worksheet.get_Range(worksheet.Cells[2, 2], worksheet.Cells[ds.Tables[0].Rows.Count + 1, 2]);  
+                                                         //    rg.NumberFormat = "00000000";  
+                                                         //}  
+
+                if (saveFileName != "")
+                {
+                    try
+                    {
+                        workbook.Saved = true;
+                        workbook.SaveCopyAs(saveFileName);
+                        //fileSaved = true;  
+                    }
+                    catch (Exception ex)
+                    {
+                        //fileSaved = false;  
+                        MessageBox.Show("导出文件时出错,文件可能正被打开！\n" + ex.Message);
+                    }
+
+                }
+                //else  
+                //{  
+                //    fileSaved = false;  
+                //}  
+                xlApp.Quit();
+                GC.Collect();//强行销毁   
+                             // if (fileSaved && System.IO.File.Exists(saveFileName)) System.Diagnostics.Process.Start(saveFileName); //打开EXCEL  
+                MessageBox.Show(fileName + "的简明资料保存成功", "提示", MessageBoxButtons.OK);
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show(ex.Message, "错误提示");
+                MessageBox.Show("报表为空,无表格需要导出", "提示", MessageBoxButtons.OK);
             }
+
+            //try
+            //{
+            //    //没有数据的话就不往下执行  
+            //    if (dataGridView1.Rows.Count == 0)
+            //        return;
+            //    //实例化一个Excel.Application对象  
+            //    Microsoft.Office.Interop.Excel.Application excel = new Microsoft.Office.Interop.Excel.Application();
+            //    //让后台执行设置为不可见，为true的话会看到打开一个Excel，然后数据在往里写  
+            //    excel.Visible = true;
+            //    //新增加一个工作簿，Workbook是直接保存，不会弹出保存对话框，加上Application会弹出保存对话框，值为false会报错  
+            //    excel.Application.Workbooks.Add(true);
+            //    //生成Excel中列头名称  
+            //    for (int i = 0; i < dataGridView1.Columns.Count; i++)
+            //    {
+            //        if (this.dt_result.Columns[i].Visible == true)
+            //        {
+            //            excel.Cells[1, i + 1] = dataGridView1.Columns[i].HeaderText;
+            //        }
+
+            //    }
+            //    //把DataGridView当前页的数据保存在Excel中  
+            //    for (int i = 0; i < dataGridView1.Rows.Count - 1; i++)
+            //    {
+            //        System.Windows.Forms.Application.DoEvents();
+            //        for (int j = 0; j < dataGridView1.Columns.Count; j++)
+            //        {
+            //            if (this.dt_result.Columns[j].Visible == true)
+            //            {
+            //                if (dataGridView1[j, i].ValueType == typeof(string))
+            //                {
+            //                    excel.Cells[i + 2, j + 1] = "'" + dataGridView1[j, i].Value.ToString();
+            //                }
+            //                else
+            //                {
+            //                    excel.Cells[i + 2, j + 1] = dataGridView1[j, i].Value.ToString();
+            //                }
+            //            }
+
+            //        }
+            //    }
+            //    //设置禁止弹出保存和覆盖的询问提示框  
+            //    excel.DisplayAlerts = true;
+            //    excel.AlertBeforeOverwriting = true;
+            //    //保存工作簿  
+            //    excel.Application.Workbooks.Add(true).Save();
+            //    //保存excel文件  
+            //    excel.Save("D:" + "\\yc" + DateTime.Now.Ticks + ".xls");
+            //    //确保Excel进程关闭  
+            //    excel.Quit();
+            //    excel = null;
+            //    GC.Collect();//如果不使用这条语句会导致excel进程无法正常退出，使用后正常退出
+            //    MessageBox.Show(this, "文件已经成功导出！", "信息提示");
+            //}
+            //catch (Exception ex)
+            //{
+            //    MessageBox.Show(ex.Message, "错误提示");
+            //}
         }
 
         private void cb_sheetNameOne_SelectedIndexChanged(object sender, EventArgs e)
